@@ -1,7 +1,6 @@
 package com.example.saveandread.adapter;
 
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
@@ -15,12 +14,9 @@ import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -31,6 +27,7 @@ import com.example.saveandread.R;
 import com.example.saveandread.App.AppController;
 import com.example.saveandread.database.Teman;
 
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -39,7 +36,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class TemanAdapter extends RecyclerView.Adapter<TemanAdapter.TemanViewHolder> {
-
     private ArrayList<Teman> listData;
 
     public TemanAdapter(ArrayList<Teman> listData){
@@ -47,70 +43,67 @@ public class TemanAdapter extends RecyclerView.Adapter<TemanAdapter.TemanViewHol
     }
 
     @Override
-    public TemanAdapter.TemanViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        LayoutInflater layoutInf = LayoutInflater.from(parent.getContext());
-        View view = layoutInf.inflate(R.layout.row_data_teman, parent, false);
-        return new TemanViewHolder(view);
+    public TemanViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+        View v = inflater.inflate(R.layout.row_data_teman,parent,false);
+        return new TemanViewHolder(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull TemanAdapter.TemanViewHolder holder, int position) {
-        String id, nama, tlp;
+    public void onBindViewHolder(TemanViewHolder holder, int position) {
+        String id,nm,tlp;
 
         id = listData.get(position).getId();
-        nama = listData.get(position).getNama();
+        nm = listData.get(position).getNama();
         tlp = listData.get(position).getTelpon();
 
-        holder.tvNama.setTextColor(Color.BLACK);
-        holder.tvNama.setText(nama);
-        holder.tvNama.setTextSize(20);
-        holder.tvTelpon.setText(tlp);
+        holder.nama.setTextColor(Color.BLUE);
+        holder.nama.setTextSize(20);
+        holder.nama.setText(nm);
+        holder.telp.setText(tlp);
 
-        holder.cardKu.setOnLongClickListener(new View.OnLongClickListener() {
+        holder.card.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
                 PopupMenu pm = new PopupMenu(v.getContext(), v);
                 pm.inflate(R.menu.popup1);
-
                 pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
                     @Override
                     public boolean onMenuItemClick(MenuItem item) {
                         switch (item.getItemId()){
                             case R.id.edit:
-                                Bundle bundle = new Bundle();
+                                Bundle b = new Bundle();
+                                b.putString("id",id);
+                                b.putString("nm",nm);
+                                b.putString("tlp",tlp);
 
-                                bundle.putString("key1", id);
-                                bundle.putString("key2", nama);
-                                bundle.putString("key3", tlp);
-
-                                Intent inten = new Intent(v.getContext(), EditTeman.class);
-                                inten.putExtras(bundle);
-                                v.getContext().startActivity(inten);
+                                Intent i = new Intent(v.getContext(), EditTeman.class);
+                                i.putExtras(b);
+                                v.getContext().startActivity(i);
                                 break;
 
                             case R.id.hapus:
-                                AlertDialog.Builder alertdb = new AlertDialog.Builder(v.getContext());
-                                alertdb.setTitle("Yakin "+nama+" akan dihapus?");
-                                alertdb.setMessage("Tekan Ya untuk menghapus");
-                                alertdb.setCancelable(false);
-                                alertdb.setPositiveButton("Ya", new DialogInterface.OnClickListener() {
+                                AlertDialog.Builder alert = new AlertDialog.Builder(v.getContext());
+                                alert.setTitle("Yakin "+nm+" akan dihapus?");
+                                alert.setMessage("Tekan Ya untuk menghapus");
+                                alert.setCancelable(false);
+                                alert.setPositiveButton("Ya", new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
-                                        HapusData(id);
-                                        Toast.makeText(v.getContext(), "Data "+id+" telah dihapus", Toast.LENGTH_LONG).show();
-
-                                        Intent intent = new Intent(v.getContext(), MainActivity.class);
-                                        v.getContext().startActivity(intent);
+                                        deleteData(id);
+                                        Toast.makeText(v.getContext(),"Data "+id+" telah dihapus",Toast.LENGTH_LONG).show();
+                                        Intent i = new Intent(v.getContext(), MainActivity.class);
+                                        v.getContext().startActivity(i);
                                     }
                                 });
-                                alertdb.setNegativeButton("Tidak", new DialogInterface.OnClickListener() {
+                                alert.setNegativeButton("Tidak", new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
                                         dialog.cancel();
                                     }
                                 });
-                                AlertDialog adlg = alertdb.create();
-                                adlg.show();
+                                AlertDialog ad = alert.create();
+                                ad.show();
                                 break;
                         }
                         return true;
@@ -122,55 +115,52 @@ public class TemanAdapter extends RecyclerView.Adapter<TemanAdapter.TemanViewHol
         });
     }
 
-    private void HapusData(final String idx){
-        String url_delete = "http://127.0.0.1:8080/umyTI/deletetm.php";
+    private void deleteData(final String idx){
+        String url_delete = "http://10.0.2.2:8080/umyTI/hapusteman.php";
         final String TAG = MainActivity.class.getSimpleName();
-        final String TAG_SUCCES = "success";
-        final int[] sukses = new int[1];
+        final String TAG_SUCCESS = "success";
+        final int[] success = new int[1];
 
-        StringRequest stringReq = new StringRequest(Request.Method.POST, url_delete, new Response.Listener<String>() {
+        StringRequest sr = new StringRequest(Request.Method.POST, url_delete, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                Log.d(TAG, "Respon: " + response.toString());
-
+                Log.d(TAG, "Respond : " + response.toString());
                 try {
-                    JSONObject jObj = new JSONObject(response);
-                    sukses[0] = jObj.getInt(TAG_SUCCES);
+                    JSONObject obj = new JSONObject(response);
+                    success[0] = obj.getInt(TAG_SUCCESS);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
             }
-        }, new Response.ErrorListener() {
+        }, new Response.ErrorListener(){
             @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.e(TAG, "Error: "+error.getMessage());
+            public void onErrorResponse(VolleyError err){
+                Log.e(TAG,"Error : "+err.getMessage());
             }
-        })
-        {
+        }){
             @Override
-            protected Map<String, String> getParams() {
-                Map<String , String> params = new HashMap<>();
-
-                params.put("id", idx);
+            protected Map<String,String> getParams(){
+                Map<String,String> params = new HashMap<>();
+                params.put("id",idx);
                 return params;
             }
         };
-        AppController.getInstance().addToRequestQueue(stringReq);
+        AppController.getInstance().addToRequestQueue(sr);
     }
 
     @Override
     public int getItemCount() {
-        return (listData != null)?listData.size() : 0;
+        return listData != null ? listData.size() : 0;
     }
 
     public class TemanViewHolder extends RecyclerView.ViewHolder {
-        private CardView cardKu;
-        private TextView tvNama, tvTelpon;
-        public TemanViewHolder(View view) {
-            super(view);
-            cardKu = view.findViewById(R.id.cardku);
-            tvNama = view.findViewById(R.id.txtNama);
-            tvTelpon = view.findViewById(R.id.txtTelpon);
+        private CardView card;
+        private TextView nama,telp;
+        public TemanViewHolder(View v) {
+            super(v);
+            card = v.findViewById(R.id.card);
+            nama = v.findViewById(R.id.textNama);
+            telp = v.findViewById(R.id.textTelp);
         }
     }
 }
